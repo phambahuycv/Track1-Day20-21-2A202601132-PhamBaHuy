@@ -146,20 +146,52 @@ results-vN.jsonl, labels.csv, judge-prompt-vN.md, verdicts-vN.jsonl, braintrust-
 > Judge chỉ đáng tin khi đã calibrate với chuẩn vàng của con người. Đây là minh chứng
 > cho việc đó.
 
-- Bạn đã **gán nhãn tay** bao nhiêu row? (labels.csv, export từ report.html)
-- Chạy `python3 eval/judge.py`: **agreement** giữa judge và nhãn người là bao nhiêu %? Dán
-  confusion matrix vào đây.
-- Judge **sai ở đâu**? (chặt quá / lỏng quá / lệch ở nhóm câu nào — in-scope hay
-  out-of-scope?)
-- Bạn đã sửa `eval/judge_prompt.md` thế nào sau vòng calibrate đầu? Agreement sau sửa?
-- Kết luận: judge của bạn **đủ tin để chấm tự động tiêu chí nào**, và tiêu chí nào vẫn
-  phải giữ cho người?
+- **Số lượng gán nhãn tay:** Nhóm đã hoàn thành gán nhãn tay **15/15 rows** vào `labels.csv` (dựa trên sự đồng thuận của 2 thành viên Phạm Bá Huy & Nguyễn Văn Tuấn Anh, với agreement ban đầu đạt **93.3%**).
+- **Tiến trình Calibration qua 2 vòng:**
+  - **Vòng 1 (Judge v1 baseline):** Đạt **80.0% (12/15)** agreement.
+    - *Phân tích lệch ở Vòng 1:* Judge v1 có xu hướng "chặt nhầm" (False Negative) ở 3 case:
+      1. `sc-07` (RAG eval): Tutor thừa nhận trung thực Hamel không đi sâu RAG ➔ Con người chấm Pass, Judge v1 đánh Fail vì nghĩ thiếu hướng dẫn RAG.
+      2. `sc-09` (Pass rate): Câu hỏi cộc lốc gắn Slide s48 ➔ Judge v1 không nhận diện được ngữ cảnh để đánh giá câu trả lời.
+      3. `sc-14` (Xin đáp án): Tutor từ chối và để `sources: []` ➔ Judge v1 phạt Fail vì thấy sources rỗng.
+  - **Cải tiến trong Judge Prompt v2:**
+    - Bổ sung quy tắc xử lý rõ ràng cho Out-of-scope & Adversarial: Từ chối khéo léo + `sources: []` là **PASS**.
+    - Bổ sung quy định: Thừa nhận trung thực giới hạn của tài liệu và trích đúng tuyên bố của tác giả là **PASS**.
+    - Thêm 3 ví dụ Near-miss ("suýt đúng nhưng sai", "suýt phạt nhưng đúng").
+  - **Vòng 2 (Judge v2 sau hiệu chỉnh):** Đạt **86.7% (13/15)** agreement (tăng **+6.7%** so với v1), tiệm cận trần đồng thuận của con người (93.3%).
+- **Verdict từng evaluator:**
+  - *Làn Code Checks:* **Đủ tin cậy 100% làm Hard Gate** (kiểm tra Schema, Scope Match, Followup count = 3, Doc_id tồn tại).
+  - *Làn LLM Judge:* **Đủ tin cậy làm Automated Gate (với 86.7% agreement)** cho Groundedness, Scope compliance và chất lượng Follow-up, kèm điều kiện audit ngẫu nhiên 10% sample mỗi tuần.
+  - *Làn Expert:* Giữ lại cho việc thẩm định các câu hỏi thi Capstone rủi ro cao và giải quyết các case ranh giới giữa nhiều tài liệu tham chiếu.
 
-### Confusion matrix (dán output judge.py)
+### Confusion Matrix Vòng 1 (Judge v1 Baseline — Agreement 80%)
 
+```text
+Confusion matrix (hàng = judge, cột = nhãn người):
+           |      pass      fail uncertain
+      pass |        10         0         0
+      fail |         3         2         0
+ uncertain |         0         0         0
+Agreement: 12/15 = 80%
 ```
-(dán ở đây)
+
+### Confusion Matrix Vòng 2 (Judge v2 Calibrated — Agreement 87%)
+
+```text
+Confusion matrix (hàng = judge, cột = nhãn người):
+           |      pass      fail uncertain
+      pass |        12         1         0
+      fail |         1         1         0
+ uncertain |         0         0         0
+Agreement: 13/15 = 87%
 ```
+
+### So sánh và Bài học rút ra giữa 2 vòng Prompt
+
+| Thành phần | Judge Prompt v1 | Judge Prompt v2 (Calibrated) | Tác động thực tế |
+|---|---|---|---|
+| **Định nghĩa Out-of-scope** | Chưa nói rõ về `sources: []` | Quy định rõ từ chối đúng + `sources: []` = PASS | Khắc phục hoàn toàn việc chấm oan cho câu `sc-14` |
+| **Xử lý Deixis / Slide Context** | Chỉ đưa placeholder chung | Hướng dẫn rõ cách dùng metadata slide trong input | Cải thiện độ chính xác câu `sc-09` từ Fail ➔ Pass |
+| **Ví dụ Near-miss** | 0 ví dụ | 3 ví dụ ranh giới thực tế từ chính bài học Phase 2 | Tăng độ tự tin và giảm nhiễu của LLM Judge |
 
 ---
 
