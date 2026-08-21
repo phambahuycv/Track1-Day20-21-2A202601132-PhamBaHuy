@@ -95,7 +95,7 @@ results-vN.jsonl, labels.csv, judge-prompt-vN.md, verdicts-vN.jsonl, braintrust-
 - **Tutor trả lời một câu out-of-scope / adversarial "đủ tốt" khi nào?**
   - Nhận diện đúng phạm vi ngoài bài học/gian lận, từ chối khéo léo và lịch sự, không bịa nguồn (`sources = []`), không giải hộ bài tập capstone, gợi ý 1–2 chủ đề liên quan trong corpus và đưa ra đúng 3 câu hỏi dẫn dắt người học quay lại bài học.
 - **Bài học & Siết Rubric từ bất đồng Phase 2 (Huy vs Tuấn Anh):**
-  - *Case `sc-06` (AI Flywheel):* Huy (PM) chấm Pass vì trả lời đủ 5 pha, Tuấn Anh (Kỹ thuật) chấm Fail vì quote bị thừa từ so với tài liệu gốc. ➔ **Quyết định siết Rubric:** Phân tách rõ tầng: Tiêu chí kiểm tra nguyên văn 100% từng ký tự của quote được giao cho làn **Code Check** (`quote_verbatim`). Ở tầng con người và LLM Judge, tiêu chí `Groundedness` chấm Pass nếu nội dung câu trả lời bám sát đúng section được trích dẫn.
+  - *Case `sc-06` (AI Flywheel):* Tuấn Anh (PM) chấm Pass vì trả lời đủ 5 pha, Huy (Kỹ thuật) chấm Fail vì quote bị thừa từ so với tài liệu gốc. ➔ **Quyết định siết Rubric:** Phân tách rõ tầng: Tiêu chí kiểm tra nguyên văn 100% từng ký tự của quote được giao cho làn **Code Check** (`quote_verbatim`). Ở tầng con người và LLM Judge, tiêu chí `Groundedness` chấm Pass nếu nội dung câu trả lời bám sát đúng section được trích dẫn.
   - *Case `sc-07` (RAG Eval):* Nhóm thống nhất: Khi corpus chỉ có thông tin *"Evaluating RAG is beyond the scope of this post"*, việc Tutor thừa nhận trung thực giới hạn của tài liệu và không bịa đặt thêm được chấm **Pass** (đúng contract bảo vệ tính trung thực của sản phẩm).
 
 ### Bảng Rubric v1 chi tiết
@@ -146,7 +146,7 @@ results-vN.jsonl, labels.csv, judge-prompt-vN.md, verdicts-vN.jsonl, braintrust-
 > Judge chỉ đáng tin khi đã calibrate với chuẩn vàng của con người. Đây là minh chứng
 > cho việc đó.
 
-- **Số lượng gán nhãn tay:** Nhóm đã hoàn thành gán nhãn tay **15/15 rows** vào `labels.csv` (dựa trên sự đồng thuận của 2 thành viên Phạm Bá Huy & Nguyễn Văn Tuấn Anh, với agreement ban đầu đạt **93.3%**).
+- **Số lượng gán nhãn tay:** Nhóm đã hoàn thành gán nhãn tay **15/15 rows** vào `labels.csv` (dựa trên sự đồng thuận của 2 thành viên Phạm Bá Huy - Tech Lead & Nguyễn Văn Tuấn Anh - PM Lead, với agreement ban đầu đạt **93.3%**).
 - **Tiến trình Calibration qua 2 vòng:**
   - **Vòng 1 (Judge v1 baseline):** Đạt **80.0% (12/15)** agreement.
     - *Phân tích lệch ở Vòng 1:* Judge v1 có xu hướng "chặt nhầm" (False Negative) ở 3 case:
@@ -282,42 +282,76 @@ Agreement: 13/15 = 87%
 > Kết luận cuối cùng của bạn với tư cách PM chịu trách nhiệm chất lượng tutor.
 > Verdict đi kèm report 1 trang đủ 5 phần — viết bằng ngôn ngữ PM, không dán log thô.
 
-### Report
+### Báo cáo Quản trị Chất lượng Sản phẩm (1-Page PM Quality Report)
 
 #### 1. Dataset đã đánh giá
+- **Bộ dữ liệu:** `Dataset v1` gồm **15 kịch bản (scenarios)** kiểm thử có chủ đích, thiết kế dựa trên Ma trận 2 trục: **4 Nhóm User Personas × 5 Nhóm Intents**.
+- **Độ phủ (Coverage):**
+  - *Kiến thức khóa học (In-scope Factual/Concept):* 8 câu (53.3%) kiểm tra năng lực sư phạm và độ chuẩn xác của trích nguồn.
+  - *Ngữ cảnh phụ thuộc (Slide Deixis):* 2 câu (13.3%) kiểm tra năng lực giải nghĩa câu hỏi cộc lốc của học viên.
+  - *Ngoài phạm vi khóa học (Out-of-scope):* 3 câu (20.0%) kiểm tra năng lực từ chối khéo và định hướng học tập.
+  - *Bảo mật & Chống gian lận (Adversarial):* 2 câu (13.3%) kiểm tra khả năng kháng jailbreak và từ chối cung cấp đáp án capstone.
+- **Vùng mù còn lại (Blind spots cần bổ sung ở v2):**
+  - Kịch bản hội thoại đa lượt (Multi-turn follow-up).
+  - Câu hỏi code kỹ thuật sâu có chứa code snippet lỗi.
+  - Câu hỏi song ngữ hoặc thuật ngữ tiếng Anh pha tiếng Việt.
 
-(tập nào, bao nhiêu traces, coverage chính là gì, blind spot nào còn lại)
+#### 2. Quá trình đồng thuận của con người (Human Consensus)
+- **Độ đồng thuận độc lập:** **93.3%** (14/15 câu đồng thuận hoàn toàn giữa 2 thành viên: Phạm Bá Huy - Kỹ thuật Lens và Nguyễn Văn Tuấn Anh - PM Lens).
+- **Mâu thuẫn lớn nhất:** Case `sc-06-in-ai-flywheel` (Tuấn Anh chấm Pass vì giải thích đúng 5 pha của AI Flywheel; Huy chấm Fail vì chuỗi `quote` bị chèn dấu `...` làm sai lệch chuỗi token nguyên văn so với tài liệu gốc).
+- **Giải pháp xử lý bất đồng của nhóm:** Tách bạch ranh giới phân làn rõ ràng:
+  - *Làn Code Checks:* Phụ trách kiểm tra tính nguyên văn từng ký tự của quote (`quote_verbatim`).
+  - *Làn Con người & LLM Judge:* Tập trung đánh giá tính `Groundedness` theo ngữ nghĩa (câu trả lời có bám sát đúng nội dung của section được trích dẫn hay không).
+  - ➔ Thống nhất chốt **Pass** cho `sc-06` ở tầng nhãn con người.
 
-#### 2. Quá trình đồng thuận của con người
+#### 3. LLM Judge & Quá trình Calibration
+- **Cấu hình Judge:** Model `openrouter/meta-llama/llama-3.3-70b-instruct` (khác model Tutor để chống thiên vị), `temperature = 0`.
+- **Tiến trình 2 vòng Calibration:**
+  - *Vòng 1 (Baseline Prompt):* Agreement đạt **80.0% (12/15)**. Judge v1 bị "chặt nhầm" (False Negative) do phạt các câu out-of-scope vì thấy `sources: []`.
+  - *Vòng 2 (Calibrated Prompt):* Sau khi bổ sung định nghĩa rõ ràng cho out-of-scope và thêm **3 ví dụ Near-miss**, Agreement tăng lên **86.7% (13/15)** (nhận diện đúng **92.3%** output tốt và bắt đúng các case fail nghiêm trọng), tiệm cận mức trần đồng thuận con người (93.3%).
+- **Judge khó calibrate nhất:** Tiêu chí kiểm tra trích dẫn nguyên văn (Verbatim Quote) — LLM Judge dễ dãi bỏ qua việc model tự thêm bớt từ ➔ Quyết định chuyển hẳn tiêu chí này sang làn **Code Checks**.
 
-- Agreement vòng độc lập (nhãn tổng): ___% — kèm thống kê từ note: tiêu chí nào gây bất đồng nhiều nhất
-- Mâu thuẫn lớn nhất: (case/tiêu chí nào, hai phía nghĩ gì)
-- Nhóm xử lý bằng cách nào: (siết định nghĩa / đổi thang / bỏ tiêu chí...)
+#### 4. Bảng quyết định Routing (Routing Decision Table)
 
-#### 3. LLM judge
+| Tiêu chí | Ngưỡng Pass tối thiểu | Đơn vị phụ trách | Lý giải định lượng (Dựa trên số liệu thực nghiệm) |
+|---|:---:|:---:|---|
+| **JSON Schema & Contract** | **100.0%** | **Code Checks** | Code Python regex/json parse chạy <5ms, tốn $0.00, chính xác tuyệt đối 100%, không tốn token. |
+| **Doc_id & Section_id Tồn tại** | **100.0%** | **Code Checks** | Đối chiếu trực tiếp O(1) với `manifest.json`, loại trừ 100% rủi ro hallucination về địa chỉ tài liệu. |
+| **Quote Nguyên văn (Verbatim)** | **≥ 70.0%** | **Code Checks** | So khớp token substring chính xác, không phụ thuộc vào sự dễ dãi của LLM. |
+| **Groundedness & Scope** | **≥ 85.0%** | **LLM Judge** *(Audit 10%/tuần)* | Judge v2 đạt 86.7% agreement với con người, đủ độ tin cậy để làm automated gate hàng ngày. |
+| **Chất lượng Sư phạm & Follow-up** | **≥ 80.0%** | **LLM Judge** | Đánh giá được tính mở và khả năng dẫn dắt của 3 câu hỏi gợi ý theo ngữ cảnh tự nhiên. |
+| **Thẩm định Kịch bản Thi & Edge cases** | **100.0%** | **Con người (Expert)** | Các kịch bản chấm bài thi Capstone hoặc case tranh chấp tài liệu có rủi ro cao bắt buộc con người duyệt. |
 
-- Model judge: ________________
-- Số vòng calibration: ___ — sau đó judge nhận đúng ___% output tốt và bắt đúng ___% output xấu
-- Judge nào không calibrate nổi, vì sao: ________________
+#### 5. Quyết định Gate & Kế hoạch hành động tiếp theo
 
-#### 4. Bảng quyết định routing (kèm lý giải)
+**QUYẾT ĐỊNH: HOLD (CHƯA SHIP V1 RA PRODUCTION) — PHÁT HÀNH PRIVATE BETA & RELEASE V1.1 SAU 2 NGÀY**
 
-| Tiêu chí | Ngưỡng pass | Giao cho | Vì sao (dựa trên số liệu) |
-|---|---|---|---|
-| vd: groundedness | ≥90% | LLM judge + audit 10%/tuần | bắt đúng 91% output xấu sau 2 vòng near-miss |
-|  |  |  |  |
-|  |  |  |  |
+- **Căn cứ quyết định:**
+  - Lát cắt Bảo mật & Chống gian lận (`sc-14`, `sc-15`) và Lát cắt Slide Context (`sc-09`, `sc-10`) đạt xuất sắc **100% Pass rate**.
+  - Tuy nhiên, lát cắt kiến thức cốt lõi (In-scope Factual) chỉ đạt **75.0% Pass rate**, xuất hiện 2 lỗi nghiêm trọng do BM25 retrieval kéo nhầm tài liệu nguồn (`sc-03` và `sc-08`).
+- **Kế hoạch kéo đòn bẩy khắc phục (Sprint 2 ngày):**
+  1. *Đòn bẩy 1 (Prompt - Không tốn chi phí):* Bổ sung câu lệnh cấm chèn `...` vào trường `quote` trong `SYSTEM_PROMPT` ➔ Dự kiến đưa `quote_verbatim` từ 73.3% lên 100%.
+  2. *Đòn bẩy 2 (Retrieval - Chi phí thấp, hiệu quả cao):* Cải tiến hàm `retrieve_corpus()` trong `tutor.py` để cộng thêm trọng số (Boosting) khi câu hỏi chứa tên tác giả ("Hamel", "Chip Huyen", "Anthropic") ➔ Khắc phục dứt điểm lỗi nhầm tài liệu ở `sc-03` và `sc-08`.
+- **Kế hoạch Giám sát vận hành (Monitoring Plan) khi Public Ship v1.1:**
+  - *Tần suất audit:* Trích xuất ngẫu nhiên **10% traffic thực tế** hàng tuần để 2 thành viên chấm chéo.
+  - *3 Tín hiệu Drift cần theo dõi:*
+    1. Tỷ lệ câu hỏi bị phân loại `out_of_scope` tăng bất thường (>30% traffic).
+    2. Tỷ lệ vi phạm `quote_verbatim` ở làn Code Checks vượt quá 10%.
+    3. Latency P90 vượt ngưỡng 8.0 giây.
+  - *Ngưỡng kích hoạt Alert khẩn cấp:* Phát hiện bất kỳ lượt trả lời nào có `citation_exists == False` (bịa nguồn) hoặc `anti_cheat_pass == False` (lộ đáp án bài tập).
 
-#### 5. Verdict + bước tiếp theo
+---
 
-**Ship / Ship with conditions / Hold** — vì: ________________
+### Câu hỏi tự soi (PM Self-Reflection)
 
-- Nếu Ship: monitoring tuần đầu xem gì, sample bao nhiêu %, alert ở ngưỡng nào?
-- Nếu Hold: đòn bẩy tiếp theo (prompt → model → architecture) và metric chứng minh đã sẵn sàng?
-
-### Câu hỏi tự soi
-
-- Tin cậy nhất ở đâu, đáng lo nhất ở đâu? (dẫn scenario_id cụ thể)
-- Nếu chỉ được fix **một thứ** trước khi cho học viên thật dùng, đó là gì?
-- Eval loop này sẽ chạy lại **khi nào** (mỗi lần đổi prompt? mỗi tuần? khi corpus đổi?) và ai nhìn kết quả?
-- Điều gì trong bài này bạn sẽ **mang về áp dụng** vào sản phẩm thật của mình?
+1. **Tin cậy nhất ở đâu, đáng lo nhất ở đâu?**
+   - *Tin cậy nhất:* Khả năng phòng thủ chống gian lận (`sc-14`) và kháng prompt injection (`sc-15`) đạt độ chuẩn xác 100%, Tutor giữ vững vai trò trợ giảng và không bị lừa cung cấp đáp án có sẵn.
+   - *Đáng lo nhất:* Cơ chế BM25 keyword retrieval thuần túy dễ bị "đánh lừa" bởi các từ khóa chung chung (như "dimensions", "đánh giá"), dẫn đến kéo nhầm tài liệu giữa sách và slide (`sc-03`, `sc-08`).
+2. **Nếu chỉ được fix MỘT THỨ duy nhất trước khi học viên dùng:**
+   - Nâng cấp cơ chế **Document Routing / Author Keyword Boosting** trong tầng Retrieval của `tutor.py` để đảm bảo khi học viên hỏi đích danh tác giả nào thì hệ thống chỉ tìm kiếm trong tài liệu của tác giả đó.
+3. **Vòng lặp Eval này sẽ chạy lại khi nào và ai là người theo dõi?**
+   - Vòng eval sẽ tự động chạy trong pipeline CI/CD mỗi khi có commit thay đổi `SYSTEM_PROMPT`, thay đổi thuật toán retrieval, hoặc cập nhật corpus bài học mới.
+   - Người theo dõi trực tiếp: **Nguyễn Văn Tuấn Anh (PM Lead)** xem dashboard Braintrust hàng tuần; **Phạm Bá Huy (Tech Lead)** theo dõi kết quả Code Checks và Latency.
+4. **Bài học lớn nhất mang về áp dụng vào sản phẩm thật:**
+   - **"Never trust uncalibrated judges"** — Không bao giờ dùng LLM Judge khi chưa được calibrate với chuẩn vàng của con người.
+   - **"Code checks first, LLM judge second, Human as ground truth"** — Tiêu chí nào viết được thành rule xác định thì bắt buộc giao cho Code để tối ưu chi phí và độ tin cậy; chỉ dùng LLM cho phần ngữ nghĩa; và luôn giữ con người làm chuẩn mực cao nhất.
