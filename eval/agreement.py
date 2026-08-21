@@ -11,6 +11,11 @@ In ra: % 3 người đồng thuận hoàn toàn, % từng cặp, và danh sách 
 import csv
 import sys
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 
 def read_labels(path):
     with open(path, encoding="utf-8") as f:

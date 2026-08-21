@@ -10,6 +10,11 @@ Model judge mặc định khác model tutor (EVAL_JUDGE_MODEL, mặc định ope
 import csv, json, os, sys
 from pathlib import Path
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 # tutor.py nằm ở tutor/ (khu vực sản phẩm) — thêm vào sys.path để import được
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tutor"))
 
@@ -102,7 +107,7 @@ def main():
                 inputs={"scenario_id": rec["scenario_id"], "judge_model": JUDGE_MODEL},
                 outputs={"verdict": v["verdict"], "rationale": v.get("rationale", "")},
                 metrics={**{k: x for k, x in v.get("usage", {}).items()
-                            if isinstance(x, (int, float))},
+                            if isinstance(x, (int, float)) and not isinstance(x, bool)},
                          "latency_s": v.get("latency_s", 0)},
             )
             print(v["verdict"])
