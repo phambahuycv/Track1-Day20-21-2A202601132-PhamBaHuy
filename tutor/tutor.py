@@ -205,11 +205,13 @@ def chat(messages, model=None, temperature=0, max_tokens=800, tools=None):
         payload["tools"] = tools
         payload["tool_choice"] = "auto"
     t0 = time.time()
+    last_err = None
     for attempt in range(5):  # gateway/provider rate limits (429) hoặc JSON lỗi -> retry với backoff
         try:
             resp = requests.post(base_url + "/chat/completions", json=payload, timeout=120,
                                  headers={"Authorization": "Bearer " + key})
             if resp.status_code == 429:
+                last_err = f"Rate limit 429 (Too Many Requests): {resp.text}"
                 time.sleep(3 * (attempt + 1))
                 continue
             resp.raise_for_status()
