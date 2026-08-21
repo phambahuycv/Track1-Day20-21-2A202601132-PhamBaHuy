@@ -199,23 +199,81 @@ Agreement: 13/15 = 87%
 
 > Tổng hợp điểm theo rubric trên dataset v1, rồi ra quyết định gate như một PM thật.
 
-- Kết quả chạy `eval/run_eval.py` + `eval/judge.py` trên dataset v1: **pass rate** theo từng tiêu
-  chí là bao nhiêu? (kèm link/chỉ đường tới results.jsonl, verdicts.jsonl, report.html)
-- Chi phí 1 vòng eval là bao nhiêu ($, token)? Latency trung bình 1 câu?
-- **Gate**: ngưỡng nào thì ship? Ví dụ: groundedness pass ≥ 90%, không có fail nào ở
-  nhóm blocker... — định nghĩa ngưỡng của bạn và giải thích vì sao.
-- Kết quả hiện tại: **SHIP hay CHƯA SHIP**? Căn cứ vào gate ở trên.
-- Nếu chưa ship: 3 lỗi lớn nhất cần fix ở tutor (prompt, retrieval, corpus)?
+### 1. Ngưỡng chất lượng đặt ra TRƯỚC khi xem số (Quality Gate Policy)
+*Thời điểm chốt policy:* Chốt trước khi chạy vòng đánh giá candidate cuối (Pre-commit Quality Bar).
 
-### Scorecard
+- **Ngưỡng Blocker (Zero-tolerance — Bắt buộc 100%):**
+  - `schema_valid`: **100%** (Output JSON không bao giờ được vỡ hoặc thiếu trường).
+  - `scope_sources_match`: **100%** (Out-of-scope không được có sources, in-scope bắt buộc có sources).
+  - `citation_exists`: **100%** (Không chấp nhận bất kỳ `doc_id`/`section_id` ảo nào).
+  - `anti_cheat_pass`: **100%** (Không được cung cấp đáp án giải sẵn cho bài tập capstone).
+- **Ngưỡng Chấp nhận được (Quality Target — Được phép trade-off):**
+  - `groundedness` (LLM Judge): **≥ 85%**
+  - `quote_verbatim` (Làn Code): **≥ 70%** (chấp nhận một số khác biệt nhỏ về ngắt câu miễn là trích đúng section).
+  - `latency_avg`: **< 7.0s** (P90 < 10.0s).
+  - `cost_per_query`: **< $0.002 / lượt hỏi**.
 
-| Tiêu chí | Pass | Fail | Uncertain | Pass rate |
-|---|---|---|---|---|
-| | | | | |
+---
 
-### Quyết định gate
+### 2. Kết quả Scorecard trên Dataset v1 (15 Scenarios)
 
-**SHIP / CHƯA SHIP** — vì: ...
+- **Hiệu năng & Chi phí tổng thể:**
+  - *Tổng chi phí 1 lượt chạy 15 câu:* **$0.0158** (trung bình ~$0.00105 / câu hỏi).
+  - *Tổng tokens:* **90,832 tokens** (trung bình ~6,055 tokens / câu).
+  - *Latency trung bình:* **5.54 giây / câu** (P90 = 9.21s).
+
+#### Bảng Scorecard theo Tiêu chí (All Scenarios)
+
+| Tiêu chí | Làn đánh giá | Số lượng Pass | Số lượng Fail | Pass rate | Đạt ngưỡng Gate? |
+|---|:---:|:---:|:---:|:---:|:---:|
+| **Schema Valid** | Code Checks | 15/15 | 0/15 | **100.0%** |  ĐẠT |
+| **Scope & Sources Match** | Code Checks | 15/15 | 0/15 | **100.0%** |  ĐẠT |
+| **Follow-up Count = 3** | Code Checks | 15/15 | 0/15 | **100.0%** |  ĐẠT |
+| **Citation Exists in Manifest** | Code Checks | 15/15 | 0/15 | **100.0%** |  ĐẠT |
+| **Quote Verbatim** | Code Checks | 11/15 | 4/15 | **73.3%** |  ĐẠT (ngưỡng ≥70%) |
+| **Groundedness & Scope (Judge v2)** | LLM Judge | 13/15 | 2/15 | **86.7%** |  ĐẠT (ngưỡng ≥85%) |
+
+---
+
+### 3. Cắt lát dữ liệu (Slice Breakdown)
+
+| Lát cắt dữ liệu (Slice) | Số lượng | Pass | Fail | Pass rate | Nhận xét PM |
+|---|:---:|:---:|:---:|:---:|---|
+| **Slice 1: In-scope Factual / Theory** | 8 | 6 | 2 | **75.0%** | ⚠️ **Khu vực rủi ro cao nhất:** BM25 bị lệch khi câu hỏi có tên tác giả (`sc-03`, `sc-07`). |
+| **Slice 2: Context-dependent (Slide)** | 2 | 2 | 0 | **100.0%** |  **Xuất sắc:** Model tận dụng tốt metadata slide để giải nghĩa câu hỏi để trống ngữ cảnh (`sc-09`, `sc-10`). |
+| **Slice 3: Out-of-Scope (Thời tiết, web, crypto)** | 3 | 3 | 0 | **100.0%** |  **Xuất sắc:** 100% từ chối lịch sự, không bịa nguồn, đưa 3 gợi ý quay lại bài học (`sc-11`, `sc-12`, `sc-13`). |
+| **Slice 4: Adversarial (Xin đáp án, Jailbreak)** | 2 | 2 | 0 | **100.0%** |  **Xuất sắc:** Kháng prompt injection và từ chối giải hộ bài tập capstone tuyệt đối (`sc-14`, `sc-15`). |
+
+---
+
+### 4. Đọc tay (Deep-dive) 3 Trace Fail quan trọng nhất
+
+1. **Trace 1: `sc-03-in-eval-types` (Lỗi gán sai tài liệu do Retrieval)**
+   - *Input:* *"Theo bài viết của Hamel Husain, 3 cấp độ đánh giá hệ thống AI là gì?"*
+   - *Hành vi của Tutor:* Trả lời sai thành "1) Kiểm tra nhãn chuẩn, 2) Kiểm tra thông tin, 3) Kiểm tra thời gian" và trích dẫn `slide-day19-20#s46` (thay vì `hamel-evals#level-1-unit-tests`).
+   - *Nguyên nhân gốc (Root cause):* BM25 retrieval bắt theo cụm từ "đánh giá hệ thống AI" và kéo về slide s46 có điểm score cao hơn bài blog Hamel. Tutor không kiểm tra tên tác giả mà trả lời theo slide s46.
+2. **Trace 2: `sc-08-in-chip-huyen-pipeline` (Lỗi trùng từ khóa giữa các doc)**
+   - *Input:* *"Theo sách AI Engineering của Chip Huyen, bước đầu tiên trong thiết kế pipeline evaluation là gì?"*
+   - *Hành vi của Tutor:* Trả lời "chọn dimensions" và trích slide bài giảng `s29` của Blue.
+   - *Nguyên nhân gốc (Root cause):* Slide s29 cũng chứa từ "dimensions", BM25 bắt trúng slide s29 và model gán nhầm slide s29 là của sách Chip Huyen.
+3. **Trace 3: `sc-06-in-ai-flywheel` (Lỗi quote không nguyên văn ở làn Code)**
+   - *Input:* *"Khái niệm AI Flywheel là gì và vai trò của trace analysis trong vòng lặp đó?"*
+   - *Hành vi của Tutor:* Trả lời rất tốt về mặt sư phạm (đủ 5 pha), nhưng ở trường `quote`, model tự ý chèn dấu `...` vào giữa đoạn trích: `"... 1. **Agent Success Rate** ... 2. **Trace Analysis** ..."`.
+   - *Nguyên nhân gốc (Root cause):* Prompt yêu cầu quote ngắn ~40 từ khiến model tự tóm tắt quote bằng cách chèn dấu `...`, làm chuỗi token bị đứt quãng khi so khớp bằng code.
+
+---
+
+### 5. Quyết định Gate của PM
+
+**Quyết định: CHƯA SHIP V1 (HOLD TO FIX RETRIEVAL) — Dự kiến Ship ở phiên bản v1.1 sau khi fix**
+
+- **Lý do quyết định:**
+  - Mặc dù hệ thống đạt 100% ở các slice Bảo mật, Out-of-scope và Slide context, nhưng ở **Slice In-scope cốt lõi** (trả lời kiến thức khóa học), pass rate chỉ đạt **75.0%** (chưa đạt chất lượng sư phạm mong đợi).
+  - Hai lỗi `sc-03` và `sc-08` gây ảnh hưởng nghiêm trọng đến tính chính xác học thuật của khóa học (gán sai tác giả và trả lời sai kiến thức của Hamel Husain).
+- **3 Hành động khắc phục bắt buộc trước khi Release v1.1:**
+  1. *Nâng cấp Retrieval (`tutor.py`):* Bổ sung cơ chế Boosting điểm cho `doc_id` hoặc tên tác giả khi câu hỏi có nhắc tới ("Hamel", "Anthropic", "Chip Huyen").
+  2. *Siết Prompt Quote:* Bổ sung lệnh cấm model tự chèn dấu `...` vào giữa trường `quote` trong JSON output.
+  3. *Tăng Top-k Rerank:* Tăng retrieval từ top 4 lên top 6 trước khi lọc relevance.
 
 ---
 
